@@ -60,6 +60,8 @@
         z-index: 0;
         pointer-events: none;
         opacity: 0.55; /* blend subtly behind content */
+        width: 100%;
+        height: 100%;
       }
 
       /* Particle Canvas */
@@ -68,6 +70,8 @@
         inset: 0;
         z-index: 2;
         pointer-events: none;
+        width: 100%;
+        height: 100%;
       }
 
       /* Cursor */
@@ -79,6 +83,9 @@
         position: fixed;
         pointer-events: none;
         z-index: 9999;
+        left: 0;
+        top: 0;
+        will-change: transform;
         transition:
           transform 0.18s cubic-bezier(0.19, 1, 0.22, 1),
           background 0.2s,
@@ -86,7 +93,7 @@
           width 0.2s,
           height 0.2s;
         mix-blend-mode: difference;
-        transform: translate(-50%, -50%);
+        transform: translate3d(calc(var(--cx, 0px) - 50%), calc(var(--cy, 0px) - 50%), 0);
       }
       #cursor-trail {
         width: 32px;
@@ -96,11 +103,13 @@
         position: fixed;
         pointer-events: none;
         z-index: 9998;
-        transition:
-          transform 0.55s cubic-bezier(0.19, 1, 0.22, 1),
-          opacity 0.3s;
+        left: 0;
+        top: 0;
+        will-change: transform, opacity;
+        /* Transform is driven by rAF (JS). Keep only opacity transition. */
+        transition: opacity 0.3s;
         mix-blend-mode: difference;
-        transform: translate(-50%, -50%);
+        transform: translate3d(calc(var(--tx, 0px) - 50%), calc(var(--ty, 0px) - 50%), 0);
       }
 
       /* 3D Room */
@@ -402,6 +411,24 @@
       .wall-content.leaving {
         opacity: 0;
         transform: translateY(12px);
+      }
+
+      /* Respect reduced-motion and save CPU/GPU on low-power setups */
+      @media (prefers-reduced-motion: reduce) {
+        #aurora-canvas,
+        #particle-canvas,
+        #cursor-trail {
+          display: none !important;
+        }
+        #custom-cursor {
+          transition: none !important;
+        }
+        .scroll-hint {
+          animation: none !important;
+        }
+        .panoramic-room {
+          transition: none !important;
+        }
       }
     </style>
   </head>
@@ -1239,11 +1266,28 @@
     <script>
       // ─── AURORA SHADER (from AnoAI React component, ported to vanilla Three.js) ──
       (function () {
-        const canvas = document.getElementById("aurora-canvas");
+        const reduceMotion =
+          window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        if (reduceMotion) return;
 
-        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
-        renderer.setSize(window.innerWidth, window.innerHeight);
+        const canvas = document.getElementById("aurora-canvas");
+        if (!canvas) return;
+
+        const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, alpha: false });
+        renderer.setClearColor(0x0e0e0e, 1);
+
+        const MAX_DPR = 1.25; // keep WebGL fill-rate under control
+        const RES_SCALE = 0.75; // render smaller, scale up via CSS
+        const clock = new THREE.Clock();
+
+        function resizeAurora() {
+          const pr = Math.min(window.devicePixelRatio || 1, MAX_DPR);
+          const w = Math.max(1, Math.floor(window.innerWidth * RES_SCALE));
+          const h = Math.max(1, Math.floor(window.innerHeight * RES_SCALE));
+          renderer.setPixelRatio(pr);
+          renderer.setSize(w, h, false);
+          material.uniforms.iResolution.value.set(w * pr, h * pr);
+        }
 
         const scene = new THREE.Scene();
         const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
@@ -1329,82 +1373,162 @@
         const geometry = new THREE.PlaneGeometry(2, 2);
         scene.add(new THREE.Mesh(geometry, material));
 
+        let auroraRaf = 0;
+        let auroraRunning = true;
+
         function animateAurora() {
-          material.uniforms.iTime.value += 0.016;
+          if (!auroraRunning) return;
+          material.uniforms.iTime.value += clock.getDelta();
           renderer.render(scene, camera);
-          requestAnimationFrame(animateAurora);
+          auroraRaf = requestAnimationFrame(animateAurora);
         }
+        resizeAurora();
         animateAurora();
 
-        window.addEventListener("resize", () => {
-          const pr = Math.min(window.devicePixelRatio, 1.5);
-          renderer.setSize(window.innerWidth, window.innerHeight);
-          renderer.setPixelRatio(pr);
-          material.uniforms.iResolution.value.set(window.innerWidth * pr, window.innerHeight * pr);
-        });
+        let resizeT = 0;
+        window.addEventListener(
+          "resize",
+          () => {
+            clearTimeout(resizeT);
+            resizeT = window.setTimeout(resizeAurora, 120);
+          },
+          { passive: true },
+        );
+
+        document.addEventListener(
+          "visibilitychange",
+          () => {
+            const hidden = document.hidden;
+            if (hidden && auroraRunning) {
+              auroraRunning = false;
+              cancelAnimationFrame(auroraRaf);
+            } else if (!hidden && !auroraRunning) {
+              auroraRunning = true;
+              clock.getDelta(); // reset delta burst
+              animateAurora();
+            }
+          },
+          { passive: true },
+        );
       })();
     </script>
 
     <script>
-      // ─── CURSOR ──────────────────────────────────────────────────────────────────
+      // ─── INPUT + CURSOR (rAF-driven, no layout writes) ──────────────────────────
+      const reduceMotion =
+        window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       const cursor = document.getElementById("custom-cursor");
       const trail = document.getElementById("cursor-trail");
-      let mx = 0,
-        my = 0,
-        tx = 0,
-        ty = 0;
+      const rootStyle = document.documentElement.style;
 
-      document.addEventListener("mousemove", (e) => {
-        mx = e.clientX;
-        my = e.clientY;
-        cursor.style.left = mx + "px";
-        cursor.style.top = my + "px";
-      });
+      let mx = window.innerWidth / 2,
+        my = window.innerHeight / 2,
+        tx = mx,
+        ty = my;
+      let prlxX = 0,
+        prlxY = 0;
+      let needsFrame = false;
 
-      function animateTrail() {
-        tx += (mx - tx) * 0.12;
-        ty += (my - ty) * 0.12;
-        trail.style.left = tx + "px";
-        trail.style.top = ty + "px";
-        requestAnimationFrame(animateTrail);
+      function requestFrame() {
+        if (needsFrame) return;
+        needsFrame = true;
+        requestAnimationFrame(frame);
       }
-      animateTrail();
+
+      // Use pointer events (covers mouse + pen; touch still handled separately below)
+      window.addEventListener(
+        "pointermove",
+        (e) => {
+          mx = e.clientX;
+          my = e.clientY;
+          prlxX = (window.innerWidth / 2 - mx) / 55;
+          prlxY = (window.innerHeight / 2 - my) / 55;
+          requestFrame();
+        },
+        { passive: true },
+      );
+
+      function frame() {
+        needsFrame = false;
+        if (!cursor) return;
+
+        rootStyle.setProperty("--cx", `${mx}px`);
+        rootStyle.setProperty("--cy", `${my}px`);
+        if (!reduceMotion && trail) {
+          // Keep animating after pointer stops until we converge (prevents "catch up" lag)
+          const follow = 0.2; // higher = snappier ring
+          tx += (mx - tx) * follow;
+          ty += (my - ty) * follow;
+          rootStyle.setProperty("--tx", `${tx}px`);
+          rootStyle.setProperty("--ty", `${ty}px`);
+        }
+
+        // Room parallax is applied here too (single rAF writer)
+        if (!transitioning && room) {
+          room.style.transform = `rotateY(${ANGLES[current] + prlxX * 0.14}deg) rotateX(${prlxY * 0.1}deg)`;
+        }
+
+        // If the trail is still behind, schedule another frame.
+        if (!reduceMotion && trail) {
+          const dx = mx - tx;
+          const dy = my - ty;
+          if (dx * dx + dy * dy > 0.25) requestFrame(); // ~0.5px threshold
+        }
+      }
+      requestFrame();
 
       document.querySelectorAll("a, button").forEach((el) => {
         el.addEventListener("mouseenter", () => {
-          cursor.style.transform = "translate(-50%,-50%) scale(4)";
+          cursor.style.transform =
+            "translate3d(calc(var(--cx, 0px) - 50%), calc(var(--cy, 0px) - 50%), 0) scale(4)";
           cursor.style.background = "transparent";
           cursor.style.border = "1px solid #c0c1ff";
-          trail.style.opacity = "0";
+          if (trail) trail.style.opacity = "0";
         });
         el.addEventListener("mouseleave", () => {
-          cursor.style.transform = "translate(-50%,-50%) scale(1)";
+          cursor.style.transform =
+            "translate3d(calc(var(--cx, 0px) - 50%), calc(var(--cy, 0px) - 50%), 0) scale(1)";
           cursor.style.background = "#c0c1ff";
           cursor.style.border = "none";
-          trail.style.opacity = "1";
+          if (trail) trail.style.opacity = "1";
         });
       });
 
-      // ─── PARTICLES ───────────────────────────────────────────────────────────────
-      const canvas = document.getElementById("particle-canvas");
-      const ctx = canvas.getContext("2d");
+      // ─── PARTICLES (adaptive + visibility-aware) ────────────────────────────────
+      const pCanvas = document.getElementById("particle-canvas");
+      const ctx = pCanvas ? pCanvas.getContext("2d", { alpha: true }) : null;
       let W, H;
 
       function resize() {
-        W = canvas.width = window.innerWidth;
-        H = canvas.height = window.innerHeight;
+        if (!pCanvas) return;
+        const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+        W = Math.floor(window.innerWidth * dpr);
+        H = Math.floor(window.innerHeight * dpr);
+        pCanvas.width = W;
+        pCanvas.height = H;
       }
       resize();
-      window.addEventListener("resize", resize);
+      let resizeP = 0;
+      window.addEventListener(
+        "resize",
+        () => {
+          clearTimeout(resizeP);
+          resizeP = window.setTimeout(resize, 120);
+        },
+        { passive: true },
+      );
 
-      const PARTICLE_COUNT = 110;
-      const CONNECT_DIST = 130;
-      const CURSOR_REPEL = 120;
-      const CURSOR_ATTRACT = 200;
+      const isCoarsePointer = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
+      // Increase density (dots are cheap; connections are throttled below)
+      const baseCount = isCoarsePointer ? 80 : 140; // keep touch lower to avoid jank
+      const PARTICLE_COUNT = reduceMotion ? 0 : baseCount;
+      const CONNECT_DIST = isCoarsePointer ? 110 : 125;
+      const CURSOR_REPEL = isCoarsePointer ? 0 : 120;
+      const CURSOR_ATTRACT = isCoarsePointer ? 0 : 200;
 
       const particles = Array.from({ length: PARTICLE_COUNT }, () => ({
-        x: Math.random() * window.innerWidth,
-        y: Math.random() * window.innerHeight,
+        x: Math.random() * (W || window.innerWidth),
+        y: Math.random() * (H || window.innerHeight),
         vx: (Math.random() - 0.5) * 0.28,
         vy: (Math.random() - 0.5) * 0.28,
         r: Math.random() * 1.5 + 0.5,
@@ -1413,12 +1537,13 @@
       }));
 
       function spawnBurst(count = 18) {
+        if (!ctx || reduceMotion) return;
         for (let i = 0; i < count; i++) {
           const angle = Math.random() * Math.PI * 2;
           const speed = Math.random() * 2.5 + 0.8;
           particles.push({
-            x: mx || W / 2,
-            y: my || H / 2,
+            x: (mx || window.innerWidth / 2) * (W / window.innerWidth || 1),
+            y: (my || window.innerHeight / 2) * (H / window.innerHeight || 1),
             vx: Math.cos(angle) * speed,
             vy: Math.sin(angle) * speed,
             r: Math.random() * 2 + 0.8,
@@ -1430,7 +1555,13 @@
         }
       }
 
+      let particlesRaf = 0;
+      let particlesRunning = true;
+      let frameN = 0;
+
       function drawParticles() {
+        if (!ctx || !pCanvas || !particlesRunning) return;
+        frameN++;
         ctx.clearRect(0, 0, W, H);
 
         for (let i = particles.length - 1; i >= 0; i--) {
@@ -1446,8 +1577,10 @@
               continue;
             }
           } else {
-            const dx = mx - p.x,
-              dy = my - p.y;
+            const sx = (mx || 0) * (W / window.innerWidth || 1);
+            const sy = (my || 0) * (H / window.innerHeight || 1);
+            const dx = sx - p.x,
+              dy = sy - p.y;
             const dist = Math.sqrt(dx * dx + dy * dy);
 
             if (dist < CURSOR_REPEL) {
@@ -1497,39 +1630,62 @@
           ctx.fill();
         }
 
-        for (let i = 0; i < particles.length; i++) {
-          const a = particles[i];
-          if (a.burst) continue;
-          for (let j = i + 1; j < particles.length; j++) {
-            const b = particles[j];
-            if (b.burst) continue;
-            const dx = a.x - b.x,
-              dy = a.y - b.y;
-            const d2 = dx * dx + dy * dy;
-            if (d2 < CONNECT_DIST * CONNECT_DIST) {
-              const alpha = (1 - Math.sqrt(d2) / CONNECT_DIST) * 0.12;
-              ctx.beginPath();
-              ctx.moveTo(a.x, a.y);
-              ctx.lineTo(b.x, b.y);
-              ctx.strokeStyle = `rgba(192,193,255,${alpha})`;
-              ctx.lineWidth = 0.6;
-              ctx.stroke();
+        // Connections are the expensive part; draw them every other frame.
+        if (frameN % 2 === 0) {
+          const cd2 = CONNECT_DIST * CONNECT_DIST;
+          for (let i = 0; i < particles.length; i++) {
+            const a = particles[i];
+            if (a.burst) continue;
+            for (let j = i + 1; j < particles.length; j++) {
+              const b = particles[j];
+              if (b.burst) continue;
+              const dx = a.x - b.x,
+                dy = a.y - b.y;
+              const d2 = dx * dx + dy * dy;
+              if (d2 < cd2) {
+                const alpha = (1 - Math.sqrt(d2) / CONNECT_DIST) * 0.12;
+                ctx.beginPath();
+                ctx.moveTo(a.x, a.y);
+                ctx.lineTo(b.x, b.y);
+                ctx.strokeStyle = `rgba(192,193,255,${alpha})`;
+                ctx.lineWidth = 0.6;
+                ctx.stroke();
+              }
             }
           }
         }
 
-        const grad = ctx.createRadialGradient(mx, my, 0, mx, my, CURSOR_REPEL);
-        grad.addColorStop(0, "rgba(192,193,255,0.04)");
-        grad.addColorStop(0.5, "rgba(192,193,255,0.015)");
-        grad.addColorStop(1, "rgba(192,193,255,0)");
-        ctx.beginPath();
-        ctx.arc(mx, my, CURSOR_REPEL, 0, Math.PI * 2);
-        ctx.fillStyle = grad;
-        ctx.fill();
+        if (!isCoarsePointer && CURSOR_REPEL > 0) {
+          const sx = (mx || 0) * (W / window.innerWidth || 1);
+          const sy = (my || 0) * (H / window.innerHeight || 1);
+          const grad = ctx.createRadialGradient(sx, sy, 0, sx, sy, CURSOR_REPEL);
+          grad.addColorStop(0, "rgba(192,193,255,0.04)");
+          grad.addColorStop(0.5, "rgba(192,193,255,0.015)");
+          grad.addColorStop(1, "rgba(192,193,255,0)");
+          ctx.beginPath();
+          ctx.arc(sx, sy, CURSOR_REPEL, 0, Math.PI * 2);
+          ctx.fillStyle = grad;
+          ctx.fill();
+        }
 
-        requestAnimationFrame(drawParticles);
+        particlesRaf = requestAnimationFrame(drawParticles);
       }
-      drawParticles();
+      if (PARTICLE_COUNT > 0) drawParticles();
+
+      document.addEventListener(
+        "visibilitychange",
+        () => {
+          const hidden = document.hidden;
+          if (hidden && particlesRunning) {
+            particlesRunning = false;
+            cancelAnimationFrame(particlesRaf);
+          } else if (!hidden && !particlesRunning) {
+            particlesRunning = true;
+            drawParticles();
+          }
+        },
+        { passive: true },
+      );
 
       // ─── STATE ───────────────────────────────────────────────────────────────────
       const ANGLES = [0, -90, -180, -270];
@@ -1543,16 +1699,6 @@
 
       let current = 0,
         transitioning = false;
-      let prlxX = 0,
-        prlxY = 0;
-
-      document.addEventListener("mousemove", (e) => {
-        prlxX = (window.innerWidth / 2 - e.clientX) / 55;
-        prlxY = (window.innerHeight / 2 - e.clientY) / 55;
-        if (!transitioning) {
-          room.style.transform = `rotateY(${ANGLES[current] + prlxX * 0.14}deg) rotateX(${prlxY * 0.1}deg)`;
-        }
-      });
 
       function setUI(idx) {
         navLinks.forEach((l, i) => {
