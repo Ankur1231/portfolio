@@ -4,6 +4,41 @@
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <title>ANKUR UDEY | Senior Frontend Engineer</title>
+    <!-- Canonical + social previews: https://ankur1231.github.io/portfolio/ -->
+    <link rel="canonical" href="https://ankur1231.github.io/portfolio/" />
+    <meta
+      name="description"
+      content="Senior Frontend Engineer — four years of crafting performant, pixel-perfect interfaces at the edge of engineering and design."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:site_name" content="Ankur Udey" />
+    <meta property="og:title" content="ANKUR UDEY | Senior Frontend Engineer" />
+    <meta
+      property="og:description"
+      content="Four years of crafting performant, pixel-perfect interfaces at the edge of engineering and design."
+    />
+    <meta property="og:url" content="https://ankur1231.github.io/portfolio/" />
+    <meta property="og:image" content="https://ankur1231.github.io/portfolio/og.png" />
+    <meta property="og:image:secure_url" content="https://ankur1231.github.io/portfolio/og.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="2872" />
+    <meta property="og:image:height" content="1532" />
+    <meta
+      property="og:image:alt"
+      content="Ankur Udey — Senior Frontend Engineer — portfolio preview"
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="ANKUR UDEY | Senior Frontend Engineer" />
+    <meta
+      name="twitter:description"
+      content="Four years of crafting performant, pixel-perfect interfaces at the edge of engineering and design."
+    />
+    <meta name="twitter:image" content="https://ankur1231.github.io/portfolio/og.png" />
+    <meta
+      name="twitter:image:alt"
+      content="Ankur Udey — Senior Frontend Engineer — portfolio preview"
+    />
     <link rel="icon" href="favicon.svg" type="image/x-icon" sizes="any" />
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -413,6 +448,79 @@
         transform: translateY(12px);
       }
 
+      /* Mobile section dots + back-to-top */
+      #mobile-section-dots,
+      #back-to-top {
+        display: none;
+      }
+      .is-mobile #mobile-section-dots {
+        display: flex;
+        position: fixed;
+        right: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        flex-direction: column;
+        gap: 10px;
+        z-index: 80;
+        pointer-events: auto;
+      }
+      .mobile-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 999px;
+        border: 1px solid rgba(192, 193, 255, 0.35);
+        background: rgba(14, 14, 14, 0.35);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+        transition:
+          transform 0.2s ease,
+          background 0.2s ease,
+          border-color 0.2s ease;
+      }
+      .mobile-dot[aria-current="true"] {
+        background: rgba(192, 193, 255, 0.22);
+        border-color: rgba(192, 193, 255, 0.65);
+        transform: scale(1.15);
+      }
+      .is-mobile #back-to-top {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        position: fixed;
+        left: 12px;
+        bottom: calc(12px + env(safe-area-inset-bottom));
+        z-index: 80;
+        pointer-events: auto;
+        padding: 11px 12px;
+        border-radius: 999px;
+        border: 1px solid rgba(192, 193, 255, 0.18);
+        background: rgba(14, 14, 14, 0.55);
+        color: rgba(229, 226, 225, 0.9);
+        font-size: 10px;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+        font-family: Inter, sans-serif;
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+        opacity: 0;
+        transform: translateY(8px);
+        transition:
+          opacity 0.22s ease,
+          transform 0.22s ease,
+          border-color 0.22s ease,
+          background 0.22s ease;
+      }
+      .is-mobile #back-to-top[data-visible="true"] {
+        opacity: 1;
+        transform: translateY(0);
+      }
+      .is-mobile #back-to-top:active {
+        transform: translateY(0) scale(0.98);
+      }
+
       /* Respect reduced-motion and save CPU/GPU on low-power setups */
       @media (prefers-reduced-motion: reduce) {
         #aurora-canvas,
@@ -428,6 +536,159 @@
         }
         .panoramic-room {
           transition: none !important;
+        }
+        #mobile-section-dots,
+        #back-to-top {
+          display: none !important;
+        }
+      }
+
+      /* ── Mobile: vertical narrative scroll (no 3D room) ─────────────────────
+         We use BOTH:
+         - `.is-mobile` (set by JS for reliability)
+         - media query fallback (for pure CSS / no-JS scenarios) */
+      .is-mobile body {
+        overflow: auto;
+        cursor: auto;
+      }
+      .is-mobile #custom-cursor,
+      .is-mobile #cursor-trail {
+        display: none !important;
+      }
+      .is-mobile #momentum-indicator {
+        display: none !important;
+      }
+      .is-mobile footer {
+        display: none !important;
+      }
+
+      .is-mobile nav > div {
+        padding: 18px 18px !important;
+      }
+      .is-mobile nav a.nav-link {
+        letter-spacing: 0.22em !important;
+      }
+      .is-mobile nav div[style*="gap: 48px"] {
+        gap: 16px !important;
+      }
+      .is-mobile nav {
+        mix-blend-mode: normal !important;
+      }
+      .is-mobile #progress-bar {
+        /* fixed progress line can feel jittery on mobile; keep it subtle */
+        opacity: 0.75;
+      }
+
+      .is-mobile .panoramic-viewport {
+        perspective: none;
+        height: 100svh;
+        overflow-y: auto;
+        overflow-x: hidden;
+        -webkit-overflow-scrolling: touch;
+        scroll-snap-type: y mandatory;
+        scroll-behavior: smooth;
+        scroll-padding-top: 76px;
+        overscroll-behavior-y: contain;
+      }
+      .is-mobile .panoramic-room {
+        position: relative;
+        height: auto;
+        transform: none !important;
+        transform-style: flat;
+      }
+      .is-mobile .wall {
+        position: relative;
+        width: 100%;
+        height: auto;
+        min-height: 100svh;
+        transform: none !important;
+        align-items: stretch;
+        justify-content: stretch;
+        scroll-snap-align: start;
+        scroll-snap-stop: always;
+        /* Skip offscreen work on mobile */
+        content-visibility: auto;
+        contain-intrinsic-size: 900px 1000px;
+      }
+      .is-mobile .wall-content {
+        width: 100% !important;
+        max-width: 720px !important;
+        margin: 0 auto;
+        padding: 104px 18px 56px !important;
+        text-align: left !important;
+      }
+      .is-mobile #home h1 {
+        font-size: clamp(44px, 18vw, 74px) !important;
+        line-height: 0.92 !important;
+      }
+      .is-mobile .wall-right .wall-content {
+        display: block !important;
+      }
+      .is-mobile .wall-back .wall-content > div[style*="grid-template-columns"] {
+        grid-template-columns: 1fr !important;
+      }
+      .is-mobile .wall:last-child {
+        padding-bottom: calc(24px + env(safe-area-inset-bottom));
+      }
+
+      /* Mobile perf: blur can be expensive on iOS; keep the look, drop the cost */
+      .is-mobile .work-card,
+      .is-mobile .social-row {
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        background: rgba(14, 14, 14, 0.7) !important;
+      }
+
+      @media (pointer: coarse), (max-width: 900px) {
+        html:not(.is-mobile) body {
+          overflow: auto;
+          cursor: auto;
+        }
+        html:not(.is-mobile) #custom-cursor,
+        html:not(.is-mobile) #cursor-trail,
+        html:not(.is-mobile) #momentum-indicator,
+        html:not(.is-mobile) footer {
+          display: none !important;
+        }
+        html:not(.is-mobile) .panoramic-viewport {
+          perspective: none;
+          height: 100svh;
+          overflow-y: auto;
+          overflow-x: hidden;
+          -webkit-overflow-scrolling: touch;
+          scroll-snap-type: y mandatory;
+          scroll-behavior: smooth;
+        }
+        html:not(.is-mobile) .panoramic-room {
+          position: relative;
+          height: auto;
+          transform: none !important;
+          transform-style: flat;
+        }
+        html:not(.is-mobile) .wall {
+          position: relative;
+          width: 100%;
+          height: auto;
+          min-height: 100svh;
+          transform: none !important;
+          scroll-snap-align: start;
+          scroll-snap-stop: always;
+        }
+
+        /* Show mobile affordances even without JS class */
+        html:not(.is-mobile) #mobile-section-dots {
+          display: flex;
+          position: fixed;
+          right: 12px;
+          top: 50%;
+          transform: translateY(-50%);
+          flex-direction: column;
+          gap: 10px;
+          z-index: 80;
+          pointer-events: auto;
+        }
+        html:not(.is-mobile) #back-to-top {
+          display: inline-flex;
         }
       }
     </style>
@@ -451,6 +712,17 @@
       <div class="momentum-dot" data-i="2"></div>
       <div class="momentum-dot" data-i="3"></div>
     </div>
+
+    <!-- Mobile: section dots + back-to-top -->
+    <div id="mobile-section-dots" aria-label="Sections">
+      <button class="mobile-dot" type="button" aria-label="Home" data-idx="0" aria-current="true"></button>
+      <button class="mobile-dot" type="button" aria-label="About" data-idx="1"></button>
+      <button class="mobile-dot" type="button" aria-label="Work" data-idx="2"></button>
+      <button class="mobile-dot" type="button" aria-label="Socials" data-idx="3"></button>
+    </div>
+    <button id="back-to-top" type="button" aria-label="Back to top" data-visible="false">
+      ↑ Top
+    </button>
 
     <!-- HUD Nav -->
     <nav class="fixed top-0 w-full z-50 mix-blend-difference">
@@ -541,10 +813,10 @@
     </nav>
 
     <!-- 3D Viewport -->
-    <main class="panoramic-viewport" style="position: relative; z-index: 3">
+    <main class="panoramic-viewport" style="position: relative; z-index: 3" id="scroll-root">
       <div class="panoramic-room" id="room">
         <!-- WALL 1: HOME -->
-        <section class="wall wall-front">
+        <section class="wall wall-front" id="home" data-idx="0">
           <div class="particle-overlay"></div>
           <div
             class="wall-content"
@@ -633,7 +905,7 @@
         </section>
 
         <!-- WALL 2: ABOUT -->
-        <section class="wall wall-right">
+        <section class="wall wall-right" id="about" data-idx="1">
           <div class="particle-overlay"></div>
           <div
             class="wall-content"
@@ -793,7 +1065,7 @@
         </section>
 
         <!-- WALL 3: WORK -->
-        <section class="wall wall-back">
+        <section class="wall wall-back" id="work" data-idx="2">
           <div class="particle-overlay"></div>
           <div
             class="wall-content"
@@ -1084,7 +1356,7 @@
         </section>
 
         <!-- WALL 4: SOCIALS -->
-        <section class="wall wall-left">
+        <section class="wall wall-left" id="socials" data-idx="3">
           <div class="particle-overlay"></div>
           <div
             class="wall-content"
@@ -1276,8 +1548,15 @@
         const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, alpha: false });
         renderer.setClearColor(0x0e0e0e, 1);
 
-        const MAX_DPR = 1.25; // keep WebGL fill-rate under control
-        const RES_SCALE = 0.75; // render smaller, scale up via CSS
+        const isCoarsePointer =
+          window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
+        const isSmall =
+          (window.matchMedia && window.matchMedia("(max-width: 900px)").matches) ||
+          (document.documentElement && document.documentElement.clientWidth < 900);
+        const isMobilePerf = isCoarsePointer || isSmall;
+
+        const MAX_DPR = isMobilePerf ? 1.0 : 1.25; // keep WebGL fill-rate under control
+        const RES_SCALE = isMobilePerf ? 0.65 : 0.75; // render smaller, scale up via CSS
         const clock = new THREE.Clock();
 
         function resizeAurora() {
@@ -1375,9 +1654,16 @@
 
         let auroraRaf = 0;
         let auroraRunning = true;
+        const targetFrameMs = isMobilePerf ? 1000 / 30 : 1000 / 60;
+        let lastT = 0;
 
-        function animateAurora() {
+        function animateAurora(t) {
           if (!auroraRunning) return;
+          if (t && t - lastT < targetFrameMs) {
+            auroraRaf = requestAnimationFrame(animateAurora);
+            return;
+          }
+          if (t) lastT = t;
           material.uniforms.iTime.value += clock.getDelta();
           renderer.render(scene, camera);
           auroraRaf = requestAnimationFrame(animateAurora);
@@ -1410,6 +1696,18 @@
           },
           { passive: true },
         );
+
+        // Allow other scripts (mobile scroll) to pause aurora temporarily
+        window.__auroraSetRunning = (run) => {
+          const next = !!run;
+          if (next === auroraRunning) return;
+          auroraRunning = next;
+          if (!auroraRunning) cancelAnimationFrame(auroraRaf);
+          else {
+            clock.getDelta();
+            animateAurora();
+          }
+        };
       })();
     </script>
 
@@ -1417,6 +1715,24 @@
       // ─── INPUT + CURSOR (rAF-driven, no layout writes) ──────────────────────────
       const reduceMotion =
         window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      function computeIsMobileUX() {
+        const vw = document.documentElement ? document.documentElement.clientWidth : window.innerWidth;
+        return (
+          (window.matchMedia && window.matchMedia("(pointer: coarse)").matches) ||
+          (window.matchMedia && window.matchMedia("(max-width: 900px)").matches) ||
+          vw < 900
+        );
+      }
+      let isMobileUX = computeIsMobileUX();
+      document.documentElement.classList.toggle("is-mobile", isMobileUX);
+      window.addEventListener(
+        "resize",
+        () => {
+          isMobileUX = computeIsMobileUX();
+          document.documentElement.classList.toggle("is-mobile", isMobileUX);
+        },
+        { passive: true },
+      );
       const cursor = document.getElementById("custom-cursor");
       const trail = document.getElementById("cursor-trail");
       const rootStyle = document.documentElement.style;
@@ -1439,6 +1755,7 @@
       window.addEventListener(
         "pointermove",
         (e) => {
+          if (isMobileUX) return;
           mx = e.clientX;
           my = e.clientY;
           prlxX = (window.innerWidth / 2 - mx) / 55;
@@ -1464,7 +1781,7 @@
         }
 
         // Room parallax is applied here too (single rAF writer)
-        if (!transitioning && room) {
+        if (!isMobileUX && !transitioning && room) {
           room.style.transform = `rotateY(${ANGLES[current] + prlxX * 0.14}deg) rotateX(${prlxY * 0.1}deg)`;
         }
 
@@ -1475,7 +1792,7 @@
           if (dx * dx + dy * dy > 0.25) requestFrame(); // ~0.5px threshold
         }
       }
-      requestFrame();
+      if (!isMobileUX) requestFrame();
 
       document.querySelectorAll("a, button").forEach((el) => {
         el.addEventListener("mouseenter", () => {
@@ -1696,6 +2013,8 @@
       const indic = document.getElementById("section-indicator");
       const warp = document.getElementById("warp");
       const mDots = document.querySelectorAll(".momentum-dot");
+      const mobileDots = document.querySelectorAll("#mobile-section-dots .mobile-dot");
+      const backToTop = document.getElementById("back-to-top");
 
       let current = 0,
         transitioning = false;
@@ -1708,6 +2027,12 @@
         progBar.style.width = ((idx + 1) / 4) * 100 + "%";
         indic.textContent = LABELS[idx];
         mDots.forEach((d, i) => d.classList.toggle("active", i === idx));
+
+        // Mobile dots + back-to-top
+        if (mobileDots && mobileDots.length) {
+          mobileDots.forEach((d, i) => d.setAttribute("aria-current", i === idx ? "true" : "false"));
+        }
+        if (backToTop) backToTop.dataset.visible = idx > 0 ? "true" : "false";
       }
 
       function doWarp(cb) {
@@ -1721,6 +2046,7 @@
       }
 
       function goTo(idx) {
+        if (isMobileUX) return;
         if (transitioning || idx === current) return;
         transitioning = true;
 
@@ -1757,6 +2083,11 @@
 
       function navTo(idx, e) {
         e.preventDefault();
+        if (isMobileUX) {
+          const target = document.querySelector(`section.wall[data-idx="${idx}"]`);
+          if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+          return false;
+        }
         goTo(idx);
         return false;
       }
@@ -1766,54 +2097,140 @@
         lastScrollTime = 0,
         scrollTimer = null;
 
-      window.addEventListener(
-        "wheel",
-        (e) => {
-          if (transitioning) return;
-          const now = Date.now();
-          scrollVel += e.deltaY;
-          clearTimeout(scrollTimer);
-          scrollTimer = setTimeout(() => {
+      if (!isMobileUX) {
+        window.addEventListener(
+          "wheel",
+          (e) => {
+            if (transitioning) return;
+            const now = Date.now();
+            scrollVel += e.deltaY;
+            clearTimeout(scrollTimer);
+            scrollTimer = setTimeout(() => {
+              scrollVel = 0;
+            }, 200);
+            if (now - lastScrollTime < 80) return;
+            if (Math.abs(scrollVel) < 50) return;
+            lastScrollTime = now;
+            const dir = scrollVel > 0 ? 1 : -1;
             scrollVel = 0;
-          }, 200);
-          if (now - lastScrollTime < 80) return;
-          if (Math.abs(scrollVel) < 50) return;
-          lastScrollTime = now;
-          const dir = scrollVel > 0 ? 1 : -1;
-          scrollVel = 0;
-          goTo((current + dir + 4) % 4);
-        },
-        { passive: true },
-      );
+            goTo((current + dir + 4) % 4);
+          },
+          { passive: true },
+        );
+      }
 
       let touchY = 0,
         touchT = 0;
-      window.addEventListener(
-        "touchstart",
-        (e) => {
-          touchY = e.touches[0].clientY;
-          touchT = Date.now();
-        },
-        { passive: true },
-      );
-      window.addEventListener(
-        "touchend",
-        (e) => {
-          if (transitioning) return;
-          const dy = touchY - e.changedTouches[0].clientY;
-          const dt = Date.now() - touchT;
-          const vel = Math.abs(dy) / dt;
-          if (Math.abs(dy) < 40 || vel < 0.15) return;
-          goTo((current + (dy > 0 ? 1 : -1) + 4) % 4);
-        },
-        { passive: true },
-      );
+      if (!isMobileUX) {
+        window.addEventListener(
+          "touchstart",
+          (e) => {
+            touchY = e.touches[0].clientY;
+            touchT = Date.now();
+          },
+          { passive: true },
+        );
+        window.addEventListener(
+          "touchend",
+          (e) => {
+            if (transitioning) return;
+            const dy = touchY - e.changedTouches[0].clientY;
+            const dt = Date.now() - touchT;
+            const vel = Math.abs(dy) / dt;
+            if (Math.abs(dy) < 40 || vel < 0.15) return;
+            goTo((current + (dy > 0 ? 1 : -1) + 4) % 4);
+          },
+          { passive: true },
+        );
+      }
 
       window.addEventListener("keydown", (e) => {
+        if (isMobileUX) return;
         if (transitioning) return;
         if (e.key === "ArrowDown" || e.key === "ArrowRight") goTo((current + 1) % 4);
         if (e.key === "ArrowUp" || e.key === "ArrowLeft") goTo((current + 3) % 4);
       });
+
+      // Mobile: update nav/progress as you scroll
+      if (isMobileUX) {
+        const root = document.getElementById("scroll-root");
+        const sections = Array.from(document.querySelectorAll("section.wall[data-idx]"));
+        const io = new IntersectionObserver(
+          (entries) => {
+            // Pick the most visible intersecting section.
+            let best = null;
+            for (const e of entries) {
+              if (!e.isIntersecting) continue;
+              if (!best || e.intersectionRatio > best.intersectionRatio) best = e;
+            }
+            if (!best) return;
+            const idx = Number(best.target.getAttribute("data-idx") || 0);
+            if (Number.isFinite(idx) && idx !== current) {
+              current = idx;
+              setUI(current);
+            }
+          },
+          { root, threshold: [0.45, 0.6, 0.75] },
+        );
+        sections.forEach((s) => io.observe(s));
+
+        // While actively scrolling, pause heavy background animations for smoother snap/scroll.
+        let scrollIdleT = 0;
+        const pauseBackground = () => {
+          if (particlesRunning) {
+            particlesRunning = false;
+            cancelAnimationFrame(particlesRaf);
+          }
+          if (typeof window.__auroraSetRunning === "function") window.__auroraSetRunning(false);
+        };
+        const resumeBackground = () => {
+          if (!reduceMotion) {
+            if (!particlesRunning && ctx && pCanvas) {
+              particlesRunning = true;
+              drawParticles();
+            }
+            if (typeof window.__auroraSetRunning === "function") window.__auroraSetRunning(true);
+          }
+        };
+        if (root) {
+          root.addEventListener(
+            "scroll",
+            () => {
+              pauseBackground();
+              clearTimeout(scrollIdleT);
+              scrollIdleT = window.setTimeout(resumeBackground, 140);
+            },
+            { passive: true },
+          );
+        }
+
+        // Tap dots to jump sections
+        if (mobileDots && mobileDots.length) {
+          mobileDots.forEach((btn) => {
+            btn.addEventListener(
+              "click",
+              () => {
+                const idx = Number(btn.getAttribute("data-idx") || 0);
+                const target = document.querySelector(`section.wall[data-idx="${idx}"]`);
+                if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+              },
+              { passive: true },
+            );
+          });
+        }
+
+        // Back to top
+        if (backToTop) {
+          backToTop.addEventListener(
+            "click",
+            () => {
+              const target = document.querySelector(`section.wall[data-idx="0"]`);
+              if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+            },
+            { passive: true },
+          );
+        }
+      }
 
       // ─── INIT ─────────────────────────────────────────────────────────────────
       setUI(0);
